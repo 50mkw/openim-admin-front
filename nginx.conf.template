@@ -15,8 +15,9 @@ server {
 
     # Chat Admin API (port 10009)
     location /complete_admin/ {
+        rewrite ^/complete_admin/(.*)$ /$1 break;
         set $upstream ${CHAT_ADMIN_URL};
-        proxy_pass $upstream/;
+        proxy_pass $upstream;
         proxy_http_version 1.1;
         proxy_ssl_server_name on;
         proxy_set_header Host openim-chat-klbywrir-admin.ap-northeast-1.clawcloudrun.com;
@@ -27,8 +28,9 @@ server {
 
     # Chat API (port 10008)
     location /chat/ {
+        rewrite ^/chat/(.*)$ /$1 break;
         set $upstream ${CHAT_URL};
-        proxy_pass $upstream/;
+        proxy_pass $upstream;
         proxy_http_version 1.1;
         proxy_ssl_server_name on;
         proxy_set_header Host openim-chat-klbywrir.ap-northeast-1.clawcloudrun.com;
@@ -39,8 +41,9 @@ server {
 
     # OpenIM Server API (port 10002)
     location /api/ {
+        rewrite ^/api/(.*)$ /$1 break;
         set $upstream ${IM_API_URL};
-        proxy_pass $upstream/;
+        proxy_pass $upstream;
         proxy_http_version 1.1;
         proxy_ssl_server_name on;
         proxy_set_header Host openim-server-rmycyyat.ap-northeast-1.clawcloudrun.com;
@@ -51,8 +54,9 @@ server {
 
     # WebSocket (port 10001)
     location /msg_gateway/ {
+        rewrite ^/msg_gateway/(.*)$ /$1 break;
         set $upstream ${IM_WS_URL};
-        proxy_pass $upstream/;
+        proxy_pass $upstream;
         proxy_http_version 1.1;
         proxy_ssl_server_name on;
         proxy_set_header Host openim-server-rmycyyat-ws.ap-northeast-1.clawcloudrun.com;
