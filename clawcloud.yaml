@@ -1,0 +1,115 @@
+apiVersion: app.claw.cloud/v1
+kind: Template
+metadata:
+  name: openim-admin-front
+spec:
+  title: 'OpenIM Admin Front'
+  type: public
+  author: 50mkw
+  author_id: 180503656
+  date: 2026-03-20
+  description: 'OpenIM 管理后台前端，通过环境变量配置后端服务地址，nginx 反向代理各 API 路径'
+  templateType: inline
+  categories:
+    - tool
+  defaults:
+    app_host:
+      type: string
+      value: openim-admin-${{ random(8) }}
+    app_name:
+      type: string
+      value: openim-admin-${{ random(8) }}
+
+---
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ${{ defaults.app_name }}
+  annotations:
+    originImageName: ghcr.io/50mkw/openim-admin-front:latest
+    deploy.run.claw.cloud/minReplicas: '1'
+    deploy.run.claw.cloud/maxReplicas: '1'
+  labels:
+    run.claw.cloud/app-deploy-manager: ${{ defaults.app_name }}
+    app: ${{ defaults.app_name }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ${{ defaults.app_name }}
+  template:
+    metadata:
+      labels:
+        app: ${{ defaults.app_name }}
+    spec:
+      containers:
+        - name: ${{ defaults.app_name }}
+          image: ghcr.io/50mkw/openim-admin-front:latest
+          env:
+            - name: CHAT_ADMIN_URL
+              value: https://openim-chat-klbywrir-admin.ap-northeast-1.clawcloudrun.com
+            - name: CHAT_URL
+              value: https://openim-chat-klbywrir.ap-northeast-1.clawcloudrun.com
+            - name: IM_API_URL
+              value: https://openim-server-rmycyyat.ap-northeast-1.clawcloudrun.com
+            - name: IM_WS_URL
+              value: https://openim-server-rmycyyat-ws.ap-northeast-1.clawcloudrun.com
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 200m
+              memory: 128Mi
+          ports:
+            - name: http
+              protocol: TCP
+              containerPort: 80
+          imagePullPolicy: Always
+
+---
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: ${{ defaults.app_name }}
+  labels:
+    run.claw.cloud/app-deploy-manager: ${{ defaults.app_name }}
+spec:
+  ports:
+    - port: 80
+      targetPort: 80
+  selector:
+    app: ${{ defaults.app_name }}
+
+---
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ${{ defaults.app_name }}
+  labels:
+    run.claw.cloud/app-deploy-manager: ${{ defaults.app_name }}
+    run.claw.cloud/app-deploy-manager-domain: ${{ defaults.app_host }}
+  annotations:
+    kubernetes.io/ingress.class: nginx
+    nginx.ingress.kubernetes.io/proxy-body-size: 32m
+    nginx.ingress.kubernetes.io/ssl-redirect: 'true'
+    nginx.ingress.kubernetes.io/backend-protocol: HTTP
+spec:
+  rules:
+    - host: ${{ defaults.app_host }}.${{ CLAWCLOUD_CLOUD_DOMAIN }}
+      http:
+        paths:
+          - pathType: Prefix
+            path: /
+            backend:
+              service:
+                name: ${{ defaults.app_name }}
+                port:
+                  number: 80
+  tls:
+    - hosts:
+        - ${{ defaults.app_host }}.${{ CLAWCLOUD_CLOUD_DOMAIN }}
+      secretName: ${{ CLAWCLOUD_CERT_SECRET_NAME }}
